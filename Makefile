@@ -108,10 +108,11 @@ status: ## Quick cluster status report (nodes, pods, services)
 	@KUBECONFIG=$(KUBECONFIG_FILE) kubectl get svc -A
 
 .PHONY: open
-open: ## Print URLs for the demo app, Prometheus and Grafana
-	@echo "Demo app : http://localhost:30080"
-	@echo "Grafana  : http://localhost:30030  (user: admin)"
-	@echo "Prom UI  : http://localhost:30090"
+open: ## Print URLs for the demo app, Prometheus, Grafana and Alertmanager
+	@echo "Demo app      : http://localhost:30080"
+	@echo "Grafana       : http://localhost:30030  (user: admin)"
+	@echo "Prometheus    : http://localhost:30090"
+	@echo "Alertmanager  : http://localhost:30093"
 
 .PHONY: ssh-master ssh-worker1 ssh-worker2
 ssh-master: ## SSH into the master container

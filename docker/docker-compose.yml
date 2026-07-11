@@ -8,6 +8,7 @@ name: small-homelab-boi
 #   30080 -> 30080   : NodePort for the demo Nginx app
 #   30090 -> 30090   : NodePort for Prometheus UI
 #   30030 -> 30030   : NodePort for Grafana UI
+#   30093 -> 30093   : NodePort for Alertmanager UI
 
 x-node-common: &node-common
   build:
@@ -39,6 +40,7 @@ services:
       - "30080:30080"    # demo app
       - "30090:30090"    # Prometheus
       - "30030:30030"    # Grafana
+      - "30093:30093"    # Alertmanager
 
   worker1:
     <<: *node-common

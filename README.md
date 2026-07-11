@@ -1,58 +1,63 @@
 # small-homelab-boi
 
-**Autor:** [MK (@thearrowoftime)](https://github.com/thearrowoftime)
+**Author:** [MK (@thearrowoftime)](https://github.com/thearrowoftime)
 
-Lokalny home lab zbudowany od zera: trzy „maszyny” w Dockerze, klaster Kubernetes (k3s),
-monitoring Prometheus + Grafana oraz demo aplikacja — wszystko provisionowane przez Ansible.
-Jeden `make provision` i masz działający mini-datacenter na laptopie.
+A from-scratch home lab: three Docker “machines”, a Kubernetes cluster (k3s),
+Prometheus + Grafana monitoring, and a demo app — all provisioned with Ansible.
+One `make provision` and you have a mini datacenter on a laptop.
 
-> Projekt portfolio pod DevOps / Platform / SRE. Ten sam kod działa na VPS za ~5 €/mies. —
-> zmieniasz tylko inventory, reszta zostaje.
+> Portfolio project aimed at DevOps / Platform / SRE roles. The same code runs on
+> a cheap VPS (~€5/month) — change the inventory, leave everything else alone.
 
----
-
-## Spis treści
-
-- [Co to robi](#co-to-robi)
-- [Architektura](#architektura)
-- [Stack technologiczny](#stack-technologiczny)
-- [Wymagania](#wymagania)
-- [Szybki start](#szybki-start)
-- [Co dzieje się pod spodem](#co-dzieje-się-pod-spodem)
-- [Struktura repozytorium](#struktura-repozytorium)
-- [Makefile — skróty](#makefile--skróty)
-- [Bezpieczeństwo i sekrety](#bezpieczeństwo-i-sekrety)
-- [Jak pokazać to na rozmowie](#jak-pokazać-to-na-rozmowie)
-- [Przeniesienie na VPS](#przeniesienie-na-vps)
-- [Rozwiązywanie problemów](#rozwiązywanie-problemów)
-- [Licencja](#licencja)
+**Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) —
+safe chaos engineering + detection validation against this lab.
 
 ---
 
-## Co to robi
+## Table of contents
 
-To repozytorium **nie jest gotowym klastrem** — to **automatyzacja**, która go buduje.
+- [What it builds](#what-it-builds)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [What happens under the hood](#what-happens-under-the-hood)
+- [Repository layout](#repository-layout)
+- [Makefile cheatsheet](#makefile-cheatsheet)
+- [Security and secrets](#security-and-secrets)
+- [Demo talking points](#demo-talking-points)
+- [Moving to a VPS](#moving-to-a-vps)
+- [Chaos testing with NoTears](#chaos-testing-with-notears)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-| Etap | Narzędzie | Efekt |
-|------|-----------|-------|
-| 1. „Maszyny” | Docker Compose | 3 kontenery Ubuntu z `systemd` + SSH (jak mini-VM) |
-| 2. Bootstrap | Ansible (`common`) | Hostname, `/etc/hosts`, pakiety, sysctl pod K8s |
-| 3. Kubernetes | Ansible (`k3s_server`, `k3s_agent`) | Klaster k3s: 1 master + 2 workery |
+---
+
+## What it builds
+
+This repository is **not a ready-made cluster** — it is the **automation that builds one**.
+
+| Stage | Tool | Result |
+|-------|------|--------|
+| 1. “Machines” | Docker Compose | 3 Ubuntu containers with `systemd` + SSH (mini-VMs) |
+| 2. Bootstrap | Ansible (`common`) | Hostname, `/etc/hosts`, packages, sysctls for K8s |
+| 3. Kubernetes | Ansible (`k3s_server`, `k3s_agent`) | k3s cluster: 1 master + 2 workers |
 | 4. Monitoring | Ansible + Helm | Prometheus, Grafana, Alertmanager |
-| 5. Aplikacja | Ansible + manifesty YAML | Nginx z własną stroną HTML (2 repliki) |
+| 5. Application | Ansible + YAML manifests | Nginx with a custom HTML page (2 replicas) |
 
-**Po zakończeniu** masz:
+**When provisioning finishes you get:**
 
-| Adres | Usługa |
-|-------|--------|
-| http://localhost:30080 | Demo aplikacja (Nginx) |
-| http://localhost:30030 | Grafana (`admin` + hasło z vault) |
+| URL / path | Service |
+|------------|---------|
+| http://localhost:30080 | Demo app (Nginx) |
+| http://localhost:30030 | Grafana (`admin` + password from vault) |
 | http://localhost:30090 | Prometheus UI |
-| `kubectl` + `./kubeconfig` | Pełna kontrola klastra |
+| http://localhost:30093 | Alertmanager UI |
+| `kubectl` + `./kubeconfig` | Full cluster control |
 
 ---
 
-## Architektura
+## Architecture
 
 ```
 ┌─────────────────── Docker network: small-homelab ───────────────────┐
@@ -60,58 +65,60 @@ To repozytorium **nie jest gotowym klastrem** — to **automatyzacja**, która g
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
 │   │   master    │    │   worker1   │    │   worker2   │            │
 │   │ k3s server  │    │  k3s agent  │    │  k3s agent  │            │
+│   │ shb-master  │    │ shb-worker1 │    │ shb-worker2 │            │
 │   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘            │
 │          │                  │                  │                    │
 └──────────┼──────────────────┼──────────────────┼────────────────────┘
            │ SSH :2221        │ SSH :2222        │ SSH :2223
            ▼                  ▼                  ▼
     ┌──────────────────────────────────────────────────┐
-    │  Ansible (WSL2 na Twoim laptopie)                │
-    │  inventory → role → playbook → vault           │
+    │  Ansible (WSL2 on your laptop)                   │
+    │  inventory → roles → playbooks → vault           │
     └──────────────────────────────────────────────────┘
 
-Porty wystawione na host (Windows):
+Ports published on the host (Windows):
   6443  → Kubernetes API
   30080 → demo app (NodePort)
   30030 → Grafana (NodePort)
   30090 → Prometheus (NodePort)
+  30093 → Alertmanager (NodePort)
 ```
 
-**Dlaczego kontenery zamiast prawdziwych VM?**
+**Why containers instead of real VMs?**
 
-- Lżej na laptopie (mniej RAM niż 3× VirtualBox).
-- Ansible i tak widzi je jak serwery — łączy się po SSH.
-- Ten sam playbook działa na VPS po zmianie IP w inventory.
+- Lighter on a laptop (less RAM than 3× VirtualBox).
+- Ansible still treats them as servers — it connects over SSH.
+- The same playbooks work on a VPS after you change IPs in inventory.
 
-Szczegóły: [`docs/architecture.md`](docs/architecture.md).
+Details: [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
-## Stack technologiczny
+## Tech stack
 
-| Warstwa | Technologia | Wersja / uwagi |
-|---------|-------------|----------------|
-| „Hypervisor” | Docker Desktop + WSL2 | privileged containers, cgroup v2 |
-| OS w kontenerach | Ubuntu 22.04 | systemd jako PID 1 |
-| IaC | Ansible | role, inventory, `ansible-vault` |
-| Orchestracja | k3s | v1.31, Traefik i ServiceLB wyłączone |
-| Pakiety K8s | Helm 3 | `kube-prometheus-stack` |
+| Layer | Technology | Notes |
+|-------|------------|-------|
+| “Hypervisor” | Docker Desktop + WSL2 | Privileged containers, cgroup v2 |
+| Guest OS | Ubuntu 22.04 | systemd as PID 1 |
+| IaC | Ansible | Roles, inventory, `ansible-vault` |
+| Orchestration | k3s | v1.31, Traefik and ServiceLB disabled |
+| K8s packages | Helm 3 | `kube-prometheus-stack` |
 | Workload | Nginx | Deployment + ConfigMap + NodePort Service |
 | CI | GitHub Actions | yamllint, ansible-lint, shellcheck |
 
 ---
 
-## Wymagania
+## Requirements
 
-### Sprzęt (minimum)
+### Hardware (minimum)
 
-- **RAM:** ~6 GB wolnej (3 kontenery × ~1.5 GB + k3s + monitoring)
-- **CPU:** 4 rdzenie (zalecane)
-- **Dysk:** ~5 GB na obrazy Docker
+- **RAM:** ~6 GB free (3 containers × ~1.5 GB + k3s + monitoring)
+- **CPU:** 4 cores recommended
+- **Disk:** ~5 GB for Docker images
 
-### Oprogramowanie
+### Software
 
-**Windows:** Docker Desktop z backendem WSL2.
+**Windows:** Docker Desktop with the WSL2 backend.
 
 **WSL2** (Ubuntu / Debian / Kali):
 
@@ -121,55 +128,55 @@ sudo apt update && sudo apt install -y python3 python3-venv make openssh-client
 sudo curl -fsSL https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl \
     -o /usr/local/bin/kubectl && sudo chmod +x /usr/local/bin/kubectl
 
-# Ansible — venv w katalogu projektu (zalecane na Kali)
+# Ansible — project venv (recommended on Kali)
 python3 -m venv .venv
 .venv/bin/pip install ansible-core
 export PATH="$(pwd)/.venv/bin:$PATH"
 ```
 
-> **Ważne:** `ansible-playbook` uruchamiaj w WSL, nie w PowerShell.
+> **Important:** run `ansible-playbook` in WSL, not PowerShell.
 
-W Docker Desktop: **Settings → Resources → WSL Integration** — włącz swoją dystrybucję.
+In Docker Desktop: **Settings → Resources → WSL Integration** — enable your distro.
 
 ---
 
-## Szybki start
+## Quick start
 
 ```bash
-# 1. Klonuj
+# 1. Clone
 git clone https://github.com/thearrowoftime/small-homelab-boi
 cd small-homelab-boi
 
-# 2. Ansible w venv (jeśli nie masz globalnego)
+# 2. Ansible in a venv (if you do not have a global install)
 python3 -m venv .venv && .venv/bin/pip install ansible-core
 export PATH="$(pwd)/.venv/bin:$PATH"
 
-# 3. Kolekcje Ansible
+# 3. Ansible collections
 make deps
 
-# 4. Klucz SSH dla Ansible → kontenery
+# 4. SSH key for Ansible → containers
 make ssh-key
 
-# 5. Sekrety (vault)
+# 5. Secrets (vault)
 make vault-init
-$EDITOR ansible/group_vars/vault.yml   # zamień CHANGE_ME na prawdziwe wartości
-make vault-encrypt                    # ustaw hasło vault — zapamiętaj!
+$EDITOR ansible/group_vars/vault.yml   # replace CHANGE_ME with real values
+make vault-encrypt                    # set a vault password — remember it!
 
-# 6. Uruchom kontenery (Docker Desktop musi działać!)
+# 6. Start containers (Docker Desktop must be running)
 make up
 
-# 7. Sprawdź połączenie
+# 7. Verify connectivity
 make ping
 
-# 8. Provision całego stacku (5–15 min)
+# 8. Provision the full stack (5–15 min)
 make provision
 
-# 9. Sprawdź wynik
+# 9. Check the result
 make status
 make open
 ```
 
-### kubectl z hosta
+### kubectl from the host
 
 ```bash
 export KUBECONFIG=$(pwd)/kubeconfig
@@ -179,52 +186,52 @@ kubectl get pods -A
 
 ---
 
-## Co dzieje się pod spodem
+## What happens under the hood
 
-`make provision` odpala `ansible/playbooks/site.yml`, który importuje pięć playbooków:
+`make provision` runs `ansible/playbooks/site.yml`, which imports five playbooks:
 
-### 01 — `common` (wszystkie nody)
+### 01 — `common` (all nodes)
 
-- Ustawia hostname (`master`, `worker1`, `worker2`)
-- Wpisuje węzły do `/etc/hosts` (żeby `master` rozwiązywał się z workerów)
-- Instaluje pakiety (`curl`, `jq`, `htop`, …)
-- Ładuje moduły jądra (`br_netfilter`, `overlay`) i sysctl wymagane przez Kubernetes
+- Sets hostnames (`master`, `worker1`, `worker2`)
+- Writes nodes into `/etc/hosts` (so workers can resolve `master`)
+- Installs packages (`curl`, `jq`, `htop`, …)
+- Loads kernel modules (`br_netfilter`, `overlay`) and sysctls required by Kubernetes
 
 ### 02 — `k3s_server` (master)
 
-- Instaluje k3s w trybie server (`get.k3s.io`)
-- Wyłącza Traefik i klipper ServiceLB (czyste NodePorty)
-- Czeka na API na porcie 6443
-- Pobiera `kubeconfig` do `./kubeconfig` na hoście
-- Instaluje Helm (potrzebny w roli monitoring)
+- Installs k3s in server mode (`get.k3s.io`)
+- Disables Traefik and klipper ServiceLB (clean NodePorts)
+- Waits for the API on port 6443
+- Fetches `kubeconfig` to `./kubeconfig` on the host
+- Installs Helm (needed by the monitoring role)
 
-### 03 — `k3s_agent` (workery, po jednym)
+### 03 — `k3s_agent` (workers, one at a time)
 
-- Join do klastra przez `K3S_URL` + `K3S_TOKEN` z vault
-- `serial: 1` — worker dołącza pojedynczo (łatwiejszy debug)
+- Joins the cluster via `K3S_URL` + `K3S_TOKEN` from vault
+- `serial: 1` — workers join one by one (easier debugging)
 
 ### 04 — `monitoring` (master)
 
 - Helm: `prometheus-community/kube-prometheus-stack`
-- Grafana i Prometheus wystawione jako NodePort (`30030`, `30090`)
-- Wyłączone scrapery etcd/scheduler/cm (k3s ich nie eksponuje jak kubeadm)
+- Grafana, Prometheus, and Alertmanager exposed as NodePorts (`30030`, `30090`, `30093`)
+- etcd / scheduler / controller-manager scrapers disabled (k3s does not expose them like kubeadm)
 
 ### 05 — `demo_app` (master)
 
 - Namespace `demo`
-- ConfigMap z customową stroną HTML
-- Deployment Nginx (2 repliki) + Service NodePort `30080`
+- ConfigMap with a custom HTML page
+- Nginx Deployment (2 replicas) + Service NodePort `30080`
 
 ---
 
-## Struktura repozytorium
+## Repository layout
 
 ```
 small-homelab-boi/
 ├── docker/
 │   ├── Dockerfile.node       # Ubuntu + systemd + SSH + Python
-│   ├── docker-compose.yml    # master, worker1, worker2
-│   └── ssh/                  # klucze SSH (gitignored)
+│   ├── docker-compose.yml    # master, worker1, worker2 (shb-*)
+│   └── ssh/                  # SSH keys (gitignored)
 ├── ansible/
 │   ├── ansible.cfg
 │   ├── inventory/hosts.yml
@@ -233,7 +240,7 @@ small-homelab-boi/
 │   │   ├── k3s_cluster.yml
 │   │   └── vault.yml.example
 │   ├── playbooks/
-│   │   ├── site.yml          # master — importuje 01–05
+│   │   ├── site.yml          # imports 01–05
 │   │   ├── 01-common.yml
 │   │   ├── 02-k3s-server.yml
 │   │   ├── 03-k3s-agents.yml
@@ -255,63 +262,64 @@ small-homelab-boi/
 
 ---
 
-## Makefile — skróty
+## Makefile cheatsheet
 
 ```bash
-make help         # lista wszystkich targetów
+make help         # list all targets
 make up           # docker compose up --build
-make down         # zatrzymaj kontenery
-make nuke         # usuń kontenery, obraz i kubeconfig
-make ping         # ansible ping na wszystkie nody
-make provision    # pełny site.yml
-make k3s          # tylko common + k3s (bez monitoringu i apki)
-make monitoring   # tylko kube-prometheus-stack
-make app          # tylko Nginx demo
+make down         # stop containers
+make nuke         # remove containers, image, and kubeconfig
+make ping         # ansible ping all nodes
+make provision    # full site.yml
+make k3s          # common + k3s only (no monitoring / app)
+make monitoring   # kube-prometheus-stack only
+make app          # Nginx demo only
 make status       # nodes + pods + services
-make ssh-master   # SSH do kontenera master
-make open         # wypisz URL-e
+make ssh-master   # SSH into the master container
+make open         # print URLs
 ```
 
 ---
 
-## Bezpieczeństwo i sekrety
+## Security and secrets
 
-**W repozytorium NIE MA prawdziwych sekretów.** Są tylko:
+**This repository does not contain real secrets.** It only has:
 
-- `vault.yml.example` — placeholdery `CHANGE_ME`
-- odwołania Jinja (`{{ vault_k3s_token }}`) bez wartości
+- `vault.yml.example` — `CHANGE_ME` placeholders
+- Jinja references (`{{ vault_k3s_token }}`) with no values
 
-**Lokalnie (gitignored, nie commituj):**
+**Local only (gitignored — do not commit):**
 
-| Plik | Zawartość |
-|------|-----------|
-| `ansible/group_vars/vault.yml` | token k3s + hasło Grafana (zaszyfrowane vault-em) |
-| `docker/ssh/id_ed25519` | klucz prywatny SSH |
-| `kubeconfig` | certyfikaty klastra |
-| `.vault_pass` | hasło do ansible-vault |
+| File | Contents |
+|------|----------|
+| `ansible/group_vars/vault.yml` | k3s token + Grafana password (vault-encrypted) |
+| `docker/ssh/id_ed25519` | SSH private key |
+| `kubeconfig` | cluster certificates |
+| `.vault_pass` | ansible-vault password |
 
 ```bash
-# Zaszyfrowany vault wygląda tak — bezpiecznie do commita, jeśli zaszyfrowany:
+# An encrypted vault looks like this — safe to commit once encrypted:
 $ANSIBLE_VAULT;1.1;AES256
 663863...
 ```
 
 ---
 
-## Jak pokazać to na rozmowie
+## Demo talking points
 
-1. **Struktura ról** — `ansible/roles/`, każda rola = jedna odpowiedzialność.
-2. **Vault** — pokaż zaszyfrowany plik, potem `make vault-edit` (odszyfrowanie na żywo).
-3. **Provision** — `make provision`, output z timerami per task.
-4. **Grafana** — dashboard *Kubernetes / Compute Resources / Cluster*, dane z żywego klastra.
-5. **Skalowanie** — `kubectl scale deployment nginx-demo -n demo --replicas=5`, odśwież `localhost:30080`.
+1. **Role layout** — `ansible/roles/`, one responsibility per role.
+2. **Vault** — show the encrypted file, then `make vault-edit` (live decrypt).
+3. **Provision** — `make provision`, timed output per task.
+4. **Grafana** — *Kubernetes / Compute Resources / Cluster* dashboard on live data.
+5. **Scale** — `kubectl scale deployment nginx-demo -n demo --replicas=5`, refresh `localhost:30080`.
+6. **Chaos** — run [notears](https://github.com/thearrowoftime/notears) against the lab (dry-run first).
 
 ---
 
-## Przeniesienie na VPS
+## Moving to a VPS
 
-1. Wynajmij VPS (np. Hetzner CX22: 2 vCPU, 4 GB RAM, ~4 €/mies.).
-2. Edytuj `ansible/inventory/hosts.yml`:
+1. Rent a VPS (e.g. Hetzner CX22: 2 vCPU, 4 GB RAM, ~€4/month).
+2. Edit `ansible/inventory/hosts.yml`:
 
 ```yaml
 master:   { ansible_host: 1.2.3.4,  ansible_port: 22 }
@@ -319,26 +327,52 @@ worker1:  { ansible_host: 1.2.3.5,  ansible_port: 22 }
 worker2:  { ansible_host: 1.2.3.6,  ansible_port: 22 }
 ```
 
-3. Pomiń `make up` — masz prawdziwe maszyny.
-4. `make ping && make provision` — reszta bez zmian.
+3. Skip `make up` — you already have real machines.
+4. `make ping && make provision` — everything else stays the same.
 
 ---
 
-## Rozwiązywanie problemów
+## Chaos testing with NoTears
 
-| Objaw | Co zrobić |
-|-------|-----------|
-| `dockerDesktopLinuxEngine` pipe error | Uruchom Docker Desktop |
-| `docker` nie działa w WSL | Włącz WSL Integration w Docker Desktop |
+[NoTears](https://github.com/thearrowoftime/notears) is designed to pair with this lab:
+
+| Lab resource | NoTears target |
+|--------------|----------------|
+| Containers `shb-master` / `shb-worker1` / `shb-worker2` | `kill_container` (workers only by default) |
+| SSH `127.0.0.1:2222/2223` | `restart_service`, `break_dns`, … |
+| Prometheus `:30090` | detection PromQL checks |
+| Alertmanager `:30093` | alert presence checks |
+
+```bash
+# Next to this repo:
+git clone https://github.com/thearrowoftime/notears
+cd notears
+python -m venv .venv && .venv/bin/pip install -e .
+cp config.example.yaml config.yaml   # already points at shb-* + this SSH layout
+
+notears -c config.yaml doctor
+notears -c config.yaml chaos once          # dry-run
+```
+
+Control-plane (`shb-master` / host `master`) is deny-listed by default in NoTears.
+
+---
+
+## Troubleshooting
+
+| Symptom | What to do |
+|---------|------------|
+| `dockerDesktopLinuxEngine` pipe error | Start Docker Desktop |
+| `docker` does not work in WSL | Enable WSL Integration in Docker Desktop |
 | `make ping` → Permission denied | `make ssh-key` → `make down && make up` |
-| Worker `NotReady` | Poczekaj 2 min; sprawdź token w vault |
-| Grafana niedostępna | `kubectl get svc -n monitoring` |
+| Worker `NotReady` | Wait ~2 min; check the token in vault |
+| Grafana unreachable | `kubectl get svc -n monitoring` |
 
-Pełna lista: [`docs/troubleshooting.md`](docs/troubleshooting.md).
+Full list: [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ---
 
-## Licencja
+## License
 
-MIT — zobacz [LICENSE](LICENSE).  
+MIT — see [LICENSE](LICENSE).  
 Copyright (c) 2026 MK ([@thearrowoftime](https://github.com/thearrowoftime)).
