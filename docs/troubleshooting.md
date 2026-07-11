@@ -63,8 +63,19 @@ kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
 ```
 
 The NodePort must be bound on the **master** node (that's the one whose ports
-are forwarded by Docker). The chart values pin it to `30030`; if you change
-it, update both `group_vars/all.yml` and `docker/docker-compose.yml`.
+are forwarded by Docker). The chart values pin Grafana to `30030`, Prometheus to
+`30090`, and Alertmanager to `30093`; if you change them, update
+`group_vars/all.yml` and `docker/docker-compose.yml`.
+
+## Alertmanager NodePort not reachable on localhost:30093
+
+```bash
+export KUBECONFIG=$(pwd)/kubeconfig
+kubectl get svc -n monitoring | grep -i alertmanager
+```
+
+If the Service is still ClusterIP, re-run `make monitoring` after pulling the
+values that set `alertmanager.service.type=NodePort`.
 
 ## "Vault format unhexlify error"
 

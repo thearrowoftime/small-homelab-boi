@@ -14,11 +14,16 @@ Host (Windows + Docker Desktop / WSL2)
    30080 → demo Nginx
    30030 → Grafana
    30090 → Prometheus
+   30093 → Alertmanager
 ```
 
 Each container is privileged, runs `systemd` as PID 1, and behaves like a tiny
 VM. Ansible doesn't need to know it's Docker — it just SSHes in and configures
 "machines".
+
+Container names on the Docker host: `shb-master`, `shb-worker1`, `shb-worker2`.
+Those names are what companion tools such as
+[notears](https://github.com/thearrowoftime/notears) target for chaos experiments.
 
 ## Provisioning flow
 

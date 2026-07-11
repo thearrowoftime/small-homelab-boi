@@ -30,6 +30,9 @@ prometheus:
     ruleSelectorNilUsesHelmValues: false
 
 alertmanager:
+  service:
+    type: NodePort
+    nodePort: {{ alertmanager_nodeport }}
   alertmanagerSpec:
     resources:
       requests:
