@@ -1,0 +1,5 @@
+---
+monitoring_chart_repo_name: prometheus-community
+monitoring_chart_repo_url: https://prometheus-community.github.io/helm-charts
+monitoring_chart_name: prometheus-community/kube-prometheus-stack
+monitoring_values_file: /etc/rancher/k3s/kps-values.yaml

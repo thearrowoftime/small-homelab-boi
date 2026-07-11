@@ -1,0 +1,60 @@
+name: small-homelab-boi
+
+# Three "fake VMs" emulated by privileged containers running systemd.
+# Ansible will SSH into them on 127.0.0.1:222{1,2,3} and install k3s.
+#
+# Port forwards (host -> master):
+#   6443  -> 6443    : Kubernetes API (kubectl from host)
+#   30080 -> 30080   : NodePort for the demo Nginx app
+#   30090 -> 30090   : NodePort for Prometheus UI
+#   30030 -> 30030   : NodePort for Grafana UI
+
+x-node-common: &node-common
+  build:
+    context: .
+    dockerfile: Dockerfile.node
+  image: small-homelab-boi/node:ubuntu-22.04
+  privileged: true
+  cgroup: host
+  tmpfs:
+    - /tmp
+    - /run
+    - /run/lock
+  volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    # Mount the user's public SSH key so Ansible can log in without password.
+    - ./ssh/id_ed25519.pub:/home/ansible/.ssh/authorized_keys:ro
+  restart: unless-stopped
+  networks:
+    - small-homelab
+
+services:
+  master:
+    <<: *node-common
+    container_name: shb-master
+    hostname: master
+    ports:
+      - "2221:22"        # SSH for Ansible
+      - "6443:6443"      # k3s API
+      - "30080:30080"    # demo app
+      - "30090:30090"    # Prometheus
+      - "30030:30030"    # Grafana
+
+  worker1:
+    <<: *node-common
+    container_name: shb-worker1
+    hostname: worker1
+    ports:
+      - "2222:22"
+
+  worker2:
+    <<: *node-common
+    container_name: shb-worker2
+    hostname: worker2
+    ports:
+      - "2223:22"
+
+networks:
+  small-homelab:
+    name: small-homelab
+    driver: bridge

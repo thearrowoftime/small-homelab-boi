@@ -1,0 +1,58 @@
+---
+- name: Set hostname to inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Ensure /etc/hosts has all cluster nodes
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED - small-homelab-boi nodes"
+    block: |
+      {% for host in groups['k3s_cluster'] %}
+      {{ hostvars[host].inventory_hostname }} {{ hostvars[host].inventory_hostname }}
+      {% endfor %}
+
+- name: Install common packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+      - jq
+      - htop
+      - net-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure /etc/modules-load.d for k3s networking
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k3s.conf
+    content: |
+      br_netfilter
+      overlay
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load br_netfilter (ignored if module already present in host kernel)
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+  failed_when: false
+
+- name: Sysctl tweaks required by Kubernetes
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+  loop:
+    - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { name: "net.ipv4.ip_forward", value: "1" }
+  failed_when: false

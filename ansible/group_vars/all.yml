@@ -1,0 +1,27 @@
+---
+# Tunables shared by every host. Per-role defaults live in roles/*/defaults/main.yml
+# and may override what's here.
+
+# --- k3s ---
+k3s_version: v1.31.4+k3s1
+
+# Where the kubeconfig generated on master gets copied locally for kubectl from host.
+kubeconfig_local_path: "{{ playbook_dir }}/../../kubeconfig"
+
+# --- Monitoring (kube-prometheus-stack chart) ---
+monitoring_namespace: monitoring
+monitoring_release_name: kps
+monitoring_chart_version: 65.5.0
+grafana_nodeport: 30030
+prometheus_nodeport: 30090
+
+# Grafana admin user is public; admin password is encrypted in group_vars/vault.yml
+# as vault_grafana_admin_password and referenced via grafana_admin_password below.
+grafana_admin_user: admin
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
+
+# --- Demo app (Nginx) ---
+demo_app_namespace: demo
+demo_app_replicas: 2
+demo_app_nodeport: 30080
+demo_app_image: nginx:1.27-alpine

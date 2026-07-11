@@ -1,0 +1,53 @@
+# {{ ansible_managed }}
+# Values for the kube-prometheus-stack Helm chart.
+# Tuned for a 3-node home lab on Docker (low resources, NodePort access).
+
+grafana:
+  adminUser: {{ grafana_admin_user }}
+  adminPassword: {{ grafana_admin_password }}
+  service:
+    type: NodePort
+    nodePort: {{ grafana_nodeport }}
+  defaultDashboardsTimezone: browser
+  persistence:
+    enabled: false
+
+prometheus:
+  service:
+    type: NodePort
+    nodePort: {{ prometheus_nodeport }}
+  prometheusSpec:
+    retention: 7d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    # Pick up ServiceMonitors from any namespace, not just the chart's.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+# k3s ships its own kube-proxy variant; the default ServiceMonitor port doesn't
+# always match, so disable to avoid noisy "down" alerts on a single-host lab.
+kubeProxy:
+  enabled: false
+
+# k3s exposes a single control-plane process, so the chart's etcd/scheduler/cm
+# scrapers will fail. Disable to keep the alerts panel clean.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false

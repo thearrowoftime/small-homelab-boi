@@ -1,0 +1,54 @@
+# Ubuntu 22.04 with systemd + SSH + Python = "VM in a container" for Ansible.
+# Trick: PID 1 is systemd, container runs --privileged with cgroup access,
+# so we can install/run k3s inside as if it were a real Linux server.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV container=docker
+ENV LANG=C.UTF-8
+
+# Core packages: systemd + ssh server + Python (Ansible target) + tools k3s needs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus \
+        openssh-server \
+        python3 python3-apt python3-pip \
+        sudo curl wget ca-certificates \
+        iproute2 iptables nftables \
+        gnupg lsb-release \
+        conntrack ebtables ethtool socat \
+        kmod \
+        less vim-tiny \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Strip systemd units that don't make sense in a container (cleaner boot, fewer errors).
+RUN find /etc/systemd/system /lib/systemd/system \
+        -path '*.wants/*' \
+        -not -name '*journald*' \
+        -not -name '*systemd-tmpfiles*' \
+        -not -name '*systemd-user-sessions*' \
+        -exec rm -f \{} \; \
+    && systemctl set-default multi-user.target
+
+# Unprivileged user for Ansible to SSH into (passwordless sudo).
+RUN useradd -m -s /bin/bash -G sudo ansible \
+    && echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-ansible \
+    && chmod 0440 /etc/sudoers.d/90-ansible \
+    && mkdir -p /home/ansible/.ssh \
+    && chown -R ansible:ansible /home/ansible/.ssh \
+    && chmod 700 /home/ansible/.ssh
+
+# SSH: key-only auth, generate host keys, enable service.
+RUN mkdir -p /var/run/sshd \
+    && sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config \
+    && ssh-keygen -A \
+    && systemctl enable ssh
+
+EXPOSE 22
+
+# systemd needs these mounted as tmpfs at runtime (docker-compose handles it).
+VOLUME [ "/sys/fs/cgroup", "/tmp", "/run", "/run/lock" ]
+
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

@@ -1,0 +1,6 @@
+---
+- name: Common setup on every node
+  hosts: k3s_cluster
+  gather_facts: true
+  roles:
+    - common

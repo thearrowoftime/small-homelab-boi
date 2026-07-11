@@ -1,0 +1,3 @@
+---
+k3s_install_url: "https://get.k3s.io"
+k3s_agent_extra_args: "--node-name={{ inventory_hostname }}"

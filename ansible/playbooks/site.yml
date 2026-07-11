@@ -1,0 +1,9 @@
+---
+# Provision the whole home lab in one shot.
+# Usage:
+#   ansible-playbook playbooks/site.yml --ask-vault-pass
+- ansible.builtin.import_playbook: 01-common.yml
+- ansible.builtin.import_playbook: 02-k3s-server.yml
+- ansible.builtin.import_playbook: 03-k3s-agents.yml
+- ansible.builtin.import_playbook: 04-monitoring.yml
+- ansible.builtin.import_playbook: 05-demo-app.yml
