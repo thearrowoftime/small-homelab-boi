@@ -1,0 +1,6 @@
+---
+- name: Install k3s server on the master node
+  hosts: server
+  gather_facts: true
+  roles:
+    - k3s_server

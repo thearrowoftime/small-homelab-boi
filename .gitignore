@@ -1,0 +1,27 @@
+# Secrets / generated keys
+docker/ssh/id_ed25519
+docker/ssh/id_ed25519.pub
+docker/ssh/known_hosts
+.vault_pass
+ansible/group_vars/vault.yml
+*.pem
+
+# Python venv (local Ansible install)
+.venv/
+
+# Ansible runtime
+ansible/.ansible_cache/
+ansible/*.retry
+.ansible/
+
+# Cluster
+kubeconfig
+*.kubeconfig
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/

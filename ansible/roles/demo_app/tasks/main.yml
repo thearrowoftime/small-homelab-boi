@@ -1,0 +1,24 @@
+---
+# Render and apply the Nginx demo app via kubectl (cluster-side, on master).
+
+- name: Render demo app manifest from template
+  ansible.builtin.template:
+    src: nginx.yaml.j2
+    dest: "{{ demo_app_manifest_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Apply demo app manifest with kubectl
+  ansible.builtin.command:
+    cmd: /usr/local/bin/k3s kubectl apply -f {{ demo_app_manifest_path }}
+  register: kubectl_apply
+  changed_when:
+    - "'created' in kubectl_apply.stdout or 'configured' in kubectl_apply.stdout"
+
+- name: Wait for demo app rollout
+  ansible.builtin.command:
+    cmd: >
+      /usr/local/bin/k3s kubectl rollout status deployment/nginx-demo
+      -n {{ demo_app_namespace }} --timeout=180s
+  changed_when: false

@@ -1,0 +1,13 @@
+---
+# Copy this file to vault.yml and encrypt it:
+#   cp group_vars/vault.yml.example group_vars/vault.yml
+#   ansible-vault encrypt group_vars/vault.yml
+#
+# To edit later:  ansible-vault edit group_vars/vault.yml
+# To run plays:   ansible-playbook ... --ask-vault-pass    (or --vault-password-file)
+
+# Pre-shared token used to join agents to the k3s server. Pick any long random string.
+vault_k3s_token: "CHANGE_ME_to_a_long_random_string_at_least_32_chars"
+
+# Grafana admin password (login: admin / this password).
+vault_grafana_admin_password: "CHANGE_ME_to_a_strong_password"

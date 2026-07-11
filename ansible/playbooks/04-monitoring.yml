@@ -1,0 +1,6 @@
+---
+- name: Install Prometheus + Grafana via Helm
+  hosts: server
+  gather_facts: false
+  roles:
+    - monitoring

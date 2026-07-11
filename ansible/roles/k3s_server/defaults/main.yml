@@ -1,0 +1,14 @@
+---
+k3s_install_url: "https://get.k3s.io"
+
+# Args for the systemd-installed k3s server. We disable the default ServiceLB
+# (klipper-lb) so NodePorts work cleanly through Docker port mappings, and
+# disable Traefik to keep the cluster minimal (we use plain NodePort Services).
+k3s_server_extra_args: >-
+  --write-kubeconfig-mode=644
+  --disable=traefik
+  --disable=servicelb
+  --tls-san={{ k3s_advertise_address | default(ansible_host) }}
+  --tls-san=127.0.0.1
+  --tls-san=localhost
+  --node-name={{ inventory_hostname }}

@@ -1,0 +1,6 @@
+---
+- name: Deploy the Nginx demo app
+  hosts: server
+  gather_facts: false
+  roles:
+    - demo_app
