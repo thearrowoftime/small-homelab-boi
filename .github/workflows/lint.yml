@@ -38,3 +38,15 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: scripts
+
+  sneaky-boi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install sneaky-boi
+        run: pip install "git+https://github.com/thearrowoftime/sneaky-boi.git"
+      - name: Scan ansible + docker for secrets
+        run: sneaky-boi ansible docker --only env,compose,ansible,k8s,generic -v

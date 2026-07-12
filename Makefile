@@ -50,6 +50,19 @@ vault-encrypt: ## Encrypt group_vars/vault.yml with ansible-vault
 vault-edit: ## Edit the encrypted vault file
 	cd $(ANSIBLE_DIR) && ansible-vault edit group_vars/vault.yml $(VAULT_OPTS)
 
+.PHONY: secrets
+secrets: ## Scan ansible/ + docker/ for leaked secrets (sneaky-boi)
+	@if command -v sneaky-boi >/dev/null 2>&1; then \
+	  sneaky-boi $(ANSIBLE_DIR) $(DOCKER_DIR) --only env,compose,ansible,k8s,generic -v; \
+	elif $(PYTHON) -c "import sneaky_boi" >/dev/null 2>&1; then \
+	  $(PYTHON) -m sneaky_boi $(ANSIBLE_DIR) $(DOCKER_DIR) --only env,compose,ansible,k8s,generic -v; \
+	else \
+	  echo "sneaky-boi not installed."; \
+	  echo "  pip install 'git+https://github.com/thearrowoftime/sneaky-boi.git'"; \
+	  echo "  # or: pip install -e ../sneaky-boi"; \
+	  exit 2; \
+	fi
+
 # ---------- Lifecycle ----------
 
 .PHONY: up

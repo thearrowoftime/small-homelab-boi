@@ -1,0 +1,16 @@
+# sneaky-boi config for this lab
+# https://github.com/thearrowoftime/sneaky-boi
+
+fail = true
+
+skip_paths = [
+  "vault.yml.example",
+  "group_vars/vault.yml.example",
+]
+
+allowlist_regexes = [
+  "CHANGE_ME_",
+]
+
+# Local vault ciphertext is expected; still flag accidental plaintext secrets.
+kinds = ["env", "compose", "ansible", "k8s", "generic"]

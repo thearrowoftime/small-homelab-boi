@@ -4,8 +4,10 @@ A from-scratch home lab: three Docker “machines”, a Kubernetes cluster (k3s)
 Prometheus + Grafana monitoring, and a demo app — all provisioned with Ansible.
 One `make provision` and you have a mini datacenter on a laptop.
 
-**Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) —
-safe chaos engineering + detection validation against this lab.
+**Companion tools:**
+
+- [notears](https://github.com/thearrowoftime/notears) — chaos engineering + detection validation
+- [sneaky-boi](https://github.com/thearrowoftime/sneaky-boi) — secret scanner for ansible / compose / k8s
 
 ---
 
@@ -23,6 +25,7 @@ safe chaos engineering + detection validation against this lab.
 - [Demo talking points](#demo-talking-points)
 - [Moving to a VPS](#moving-to-a-vps)
 - [Chaos testing with NoTears](#chaos-testing-with-notears)
+- [Secret scanning with sneaky-boi](#secret-scanning-with-sneaky-boi)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -261,6 +264,7 @@ make app          # Nginx demo only
 make status       # nodes + pods + services
 make ssh-master   # SSH into the master container
 make open         # print URLs
+make secrets      # scan ansible/ + docker/ for leaked secrets (sneaky-boi)
 ```
 
 ---
@@ -287,6 +291,16 @@ $ANSIBLE_VAULT;1.1;AES256
 663863...
 ```
 
+Scan before you push or provision:
+
+```bash
+pip install 'git+https://github.com/thearrowoftime/sneaky-boi.git'
+# or sibling: pip install -e ../sneaky-boi
+make secrets
+```
+
+CI runs the same scan on every PR (see `.github/workflows/lint.yml`).
+
 ---
 
 ## Demo talking points
@@ -297,6 +311,7 @@ $ANSIBLE_VAULT;1.1;AES256
 4. **Grafana** — *Kubernetes / Compute Resources / Cluster* dashboard on live data.
 5. **Scale** — `kubectl scale deployment nginx-demo -n demo --replicas=5`, refresh `localhost:30080`.
 6. **Chaos** — run [notears](https://github.com/thearrowoftime/notears) against the lab (dry-run first).
+7. **Secrets** — `make secrets` with [sneaky-boi](https://github.com/thearrowoftime/sneaky-boi) before sharing the repo.
 
 ---
 
@@ -339,6 +354,26 @@ notears -c config.yaml chaos once          # dry-run
 ```
 
 Control-plane (`shb-master` / host `master`) is deny-listed by default in NoTears.
+
+---
+
+## Secret scanning with sneaky-boi
+
+[sneaky-boi](https://github.com/thearrowoftime/sneaky-boi) scans this repo’s ansible vars, compose files, and manifests for leaked tokens/passwords.
+
+```text
+~/Projects/
+  small-homelab-boi/
+  notears/
+  sneaky-boi/
+```
+
+```bash
+pip install -e ../sneaky-boi   # or pip install 'git+https://github.com/thearrowoftime/sneaky-boi.git'
+make secrets
+```
+
+Config: `.sneaky-boi.toml` (skips `vault.yml.example`, allowlists `CHANGE_ME_` placeholders).
 
 ---
 
