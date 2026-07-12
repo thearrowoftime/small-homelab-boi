@@ -15,7 +15,7 @@ data:
     <html lang="en">
     <head>
       <meta charset="utf-8">
-      <title>Home Lab — Ansible + k3s</title>
+      <title>Home Lab - Ansible + k3s</title>
       <style>
         :root { color-scheme: dark; }
         body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -46,9 +46,9 @@ data:
         <p>This page is served by <code>nginx</code> running on a 3-node k3s cluster,
         deployed end-to-end by Ansible.</p>
         <ul>
-          <li>Demo app — this page (NodePort {{ demo_app_nodeport }})</li>
-          <li>Prometheus — <a href="http://localhost:{{ prometheus_nodeport }}">localhost:{{ prometheus_nodeport }}</a></li>
-          <li>Grafana — <a href="http://localhost:{{ grafana_nodeport }}">localhost:{{ grafana_nodeport }}</a></li>
+          <li>Demo app - this page (NodePort {{ demo_app_nodeport }})</li>
+          <li>Prometheus - <a href="http://localhost:{{ prometheus_nodeport }}">localhost:{{ prometheus_nodeport }}</a></li>
+          <li>Grafana - <a href="http://localhost:{{ grafana_nodeport }}">localhost:{{ grafana_nodeport }}</a></li>
         </ul>
         <p>Pod: <code id="host"></code></p>
         <script>document.getElementById("host").textContent = window.location.hostname + " / " + (new Date()).toISOString();</script>

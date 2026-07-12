@@ -37,7 +37,7 @@ ssh-key: ## Generate an SSH keypair used by Ansible to log into containers
 vault-init: ## Create group_vars/vault.yml from the example and encrypt it
 	@if [ ! -f $(ANSIBLE_DIR)/group_vars/vault.yml ]; then \
 	    cp $(ANSIBLE_DIR)/group_vars/vault.yml.example $(ANSIBLE_DIR)/group_vars/vault.yml; \
-	    echo "Created group_vars/vault.yml — edit the placeholders, then run 'make vault-encrypt'"; \
+	    echo "Created group_vars/vault.yml - edit the placeholders, then run 'make vault-encrypt'"; \
 	else \
 	    echo "vault.yml already exists; skip."; \
 	fi

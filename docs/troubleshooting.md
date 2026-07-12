@@ -42,7 +42,7 @@ journalctl -u k3s-agent -f --no-pager
 ```
 
 The most common cause is the `K3S_TOKEN` not matching between server and
-agent — that means `vault.yml` was edited but the server install isn't
+agent - that means `vault.yml` was edited but the server install isn't
 re-running. Force a re-run:
 
 ```bash

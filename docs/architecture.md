@@ -18,7 +18,7 @@ Host (Windows + Docker Desktop / WSL2)
 ```
 
 Each container is privileged, runs `systemd` as PID 1, and behaves like a tiny
-VM. Ansible doesn't need to know it's Docker — it just SSHes in and configures
+VM. Ansible doesn't need to know it's Docker - it just SSHes in and configures
 "machines".
 
 Container names on the Docker host: `shb-master`, `shb-worker1`, `shb-worker2`.
@@ -42,8 +42,8 @@ Those names are what companion tools such as
 Two secrets live in `ansible/group_vars/vault.yml` (encrypted with
 `ansible-vault`):
 
-- `vault_k3s_token` — shared pre-auth token for agents joining the server.
-- `vault_grafana_admin_password` — admin password for Grafana.
+- `vault_k3s_token` - shared pre-auth token for agents joining the server.
+- `vault_grafana_admin_password` - admin password for Grafana.
 
 `group_vars/all.yml` references them through plain variable names
 (`k3s_token`, `grafana_admin_password`) so role code never sees the `vault_*`
@@ -51,16 +51,16 @@ prefix directly.
 
 ## Why these choices
 
-- **k3s, not kubeadm** — single binary, fast install, production-grade. Same
+- **k3s, not kubeadm** - single binary, fast install, production-grade. Same
   API as upstream Kubernetes; recruiters and engineers recognize it.
-- **`--disable=traefik --disable=servicelb`** — keeps the cluster minimal,
+- **`--disable=traefik --disable=servicelb`** - keeps the cluster minimal,
   predictable port behaviour, and lets us expose Services via NodePort that
   the host can reach through Docker's published ports.
-- **kube-prometheus-stack** — the canonical Prometheus + Grafana + Alertmanager
+- **kube-prometheus-stack** - the canonical Prometheus + Grafana + Alertmanager
   bundle. One Helm release, working dashboards out of the box.
-- **NodePort, not Ingress** — Ingress would need DNS or extra rewriting; for a
+- **NodePort, not Ingress** - Ingress would need DNS or extra rewriting; for a
   laptop demo, three forwarded ports is the simpler, honest choice.
-- **`serial: 1` on agents** — one worker joins at a time. Makes failures
+- **`serial: 1` on agents** - one worker joins at a time. Makes failures
   obvious in the log; in production it would protect rolling upgrades.
 
 ## Moving to a VPS later

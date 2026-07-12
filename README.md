@@ -1,10 +1,10 @@
 # small-homelab-boi
 
 A from-scratch home lab: three Docker “machines”, a Kubernetes cluster (k3s),
-Prometheus + Grafana monitoring, and a demo app — all provisioned with Ansible.
+Prometheus + Grafana monitoring, and a demo app - all provisioned with Ansible.
 One `make provision` and you have a mini datacenter on a laptop.
 
-**Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) —
+**Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) -
 safe chaos engineering + detection validation against this lab.
 
 ---
@@ -30,7 +30,7 @@ safe chaos engineering + detection validation against this lab.
 
 ## What it builds
 
-This repository is **not a ready-made cluster** — it is the **automation that builds one**.
+This repository is **not a ready-made cluster** - it is the **automation that builds one**.
 
 | Stage | Tool | Result |
 |-------|------|--------|
@@ -112,7 +112,7 @@ Ports published on the host (Windows):
 sudo apt update && sudo apt install -y python3 python3-venv make openssh-client
 sudo curl -fsSL https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && sudo chmod +x /usr/local/bin/kubectl
 
-# Ansible — project venv (recommended on Kali)
+# Ansible - project venv (recommended on Kali)
 python3 -m venv .venv
 .venv/bin/pip install ansible-core
 export PATH="$(pwd)/.venv/bin:$PATH"
@@ -120,7 +120,7 @@ export PATH="$(pwd)/.venv/bin:$PATH"
 
 > **Important:** run `ansible-playbook` in WSL, not PowerShell.
 
-In Docker Desktop: **Settings → Resources → WSL Integration** — enable your distro.
+In Docker Desktop: **Settings → Resources → WSL Integration** - enable your distro.
 
 ---
 
@@ -144,7 +144,7 @@ make ssh-key
 # 5. Secrets (vault)
 make vault-init
 $EDITOR ansible/group_vars/vault.yml   # replace CHANGE_ME with real values
-make vault-encrypt                    # set a vault password — remember it!
+make vault-encrypt                    # set a vault password - remember it!
 
 # 6. Start containers (Docker Desktop must be running)
 make up
@@ -152,7 +152,7 @@ make up
 # 7. Verify connectivity
 make ping
 
-# 8. Provision the full stack (5–15 min)
+# 8. Provision the full stack (5-15 min)
 make provision
 
 # 9. Check the result
@@ -174,14 +174,14 @@ kubectl get pods -A
 
 `make provision` runs `ansible/playbooks/site.yml`, which imports five playbooks:
 
-### 01 — `common` (all nodes)
+### 01 - `common` (all nodes)
 
 - Sets hostnames (`master`, `worker1`, `worker2`)
 - Writes nodes into `/etc/hosts` (so workers can resolve `master`)
 - Installs packages (`curl`, `jq`, `htop`, …)
 - Loads kernel modules (`br_netfilter`, `overlay`) and sysctls required by Kubernetes
 
-### 02 — `k3s_server` (master)
+### 02 - `k3s_server` (master)
 
 - Installs k3s in server mode (`get.k3s.io`)
 - Disables Traefik and klipper ServiceLB (clean NodePorts)
@@ -189,18 +189,18 @@ kubectl get pods -A
 - Fetches `kubeconfig` to `./kubeconfig` on the host
 - Installs Helm (needed by the monitoring role)
 
-### 03 — `k3s_agent` (workers, one at a time)
+### 03 - `k3s_agent` (workers, one at a time)
 
 - Joins the cluster via `K3S_URL` + `K3S_TOKEN` from vault
-- `serial: 1` — workers join one by one (easier debugging)
+- `serial: 1` - workers join one by one (easier debugging)
 
-### 04 — `monitoring` (master)
+### 04 - `monitoring` (master)
 
 - Helm: `prometheus-community/kube-prometheus-stack`
 - Grafana, Prometheus, and Alertmanager exposed as NodePorts (`30030`, `30090`, `30093`)
 - etcd / scheduler / controller-manager scrapers disabled (k3s does not expose them like kubeadm)
 
-### 05 — `demo_app` (master)
+### 05 - `demo_app` (master)
 
 - Namespace `demo`
 - ConfigMap with a custom HTML page
@@ -224,7 +224,7 @@ small-homelab-boi/
 │   │   ├── k3s_cluster.yml
 │   │   └── vault.yml.example
 │   ├── playbooks/
-│   │   ├── site.yml          # imports 01–05
+│   │   ├── site.yml          # imports 01-05
 │   │   ├── 01-common.yml
 │   │   ├── 02-k3s-server.yml
 │   │   ├── 03-k3s-agents.yml
@@ -269,10 +269,10 @@ make open         # print URLs
 
 **This repository does not contain real secrets.** It only has:
 
-- `vault.yml.example` — `CHANGE_ME` placeholders
+- `vault.yml.example` - `CHANGE_ME` placeholders
 - Jinja references (`{{ vault_k3s_token }}`) with no values
 
-**Local only (gitignored — do not commit):**
+**Local only (gitignored - do not commit):**
 
 | File | Contents |
 |------|----------|
@@ -282,7 +282,7 @@ make open         # print URLs
 | `.vault_pass` | ansible-vault password |
 
 ```bash
-# An encrypted vault looks like this — safe to commit once encrypted:
+# An encrypted vault looks like this - safe to commit once encrypted:
 $ANSIBLE_VAULT;1.1;AES256
 663863...
 ```
@@ -291,12 +291,12 @@ $ANSIBLE_VAULT;1.1;AES256
 
 ## Demo talking points
 
-1. **Role layout** — `ansible/roles/`, one responsibility per role.
-2. **Vault** — show the encrypted file, then `make vault-edit` (live decrypt).
-3. **Provision** — `make provision`, timed output per task.
-4. **Grafana** — *Kubernetes / Compute Resources / Cluster* dashboard on live data.
-5. **Scale** — `kubectl scale deployment nginx-demo -n demo --replicas=5`, refresh `localhost:30080`.
-6. **Chaos** — run [notears](https://github.com/thearrowoftime/notears) against the lab (dry-run first).
+1. **Role layout** - `ansible/roles/`, one responsibility per role.
+2. **Vault** - show the encrypted file, then `make vault-edit` (live decrypt).
+3. **Provision** - `make provision`, timed output per task.
+4. **Grafana** - *Kubernetes / Compute Resources / Cluster* dashboard on live data.
+5. **Scale** - `kubectl scale deployment nginx-demo -n demo --replicas=5`, refresh `localhost:30080`.
+6. **Chaos** - run [notears](https://github.com/thearrowoftime/notears) against the lab (dry-run first).
 
 ---
 
@@ -311,8 +311,8 @@ worker1:  { ansible_host: 1.2.3.5,  ansible_port: 22 }
 worker2:  { ansible_host: 1.2.3.6,  ansible_port: 22 }
 ```
 
-3. Skip `make up` — you already have real machines.
-4. `make ping && make provision` — everything else stays the same.
+3. Skip `make up` - you already have real machines.
+4. `make ping && make provision` - everything else stays the same.
 
 ---
 

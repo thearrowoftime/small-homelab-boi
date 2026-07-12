@@ -11,7 +11,7 @@
     mode: "0755"
   when: not k3s_binary.stat.exists
 
-- name: Install k3s server (idempotent — script is a no-op when up-to-date)
+- name: Install k3s server (idempotent - script is a no-op when up-to-date)
   ansible.builtin.command: /tmp/k3s-install.sh
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
