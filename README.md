@@ -1,13 +1,8 @@
 # small-homelab-boi
 
-**Author:** [MK (@thearrowoftime)](https://github.com/thearrowoftime)
-
 A from-scratch home lab: three Docker “machines”, a Kubernetes cluster (k3s),
 Prometheus + Grafana monitoring, and a demo app — all provisioned with Ansible.
 One `make provision` and you have a mini datacenter on a laptop.
-
-> Portfolio project aimed at DevOps / Platform / SRE roles. The same code runs on
-> a cheap VPS (~€5/month) — change the inventory, leave everything else alone.
 
 **Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) —
 safe chaos engineering + detection validation against this lab.
@@ -84,21 +79,11 @@ Ports published on the host (Windows):
   30093 → Alertmanager (NodePort)
 ```
 
-**Why containers instead of real VMs?**
-
-- Lighter on a laptop (less RAM than 3× VirtualBox).
-- Ansible still treats them as servers — it connects over SSH.
-- The same playbooks work on a VPS after you change IPs in inventory.
-
-Details: [`docs/architecture.md`](docs/architecture.md).
-
----
-
 ## Tech stack
 
 | Layer | Technology | Notes |
 |-------|------------|-------|
-| “Hypervisor” | Docker Desktop + WSL2 | Privileged containers, cgroup v2 |
+| “Hypervisor” | Docker Desktop + WSL2 | Privileged containers |
 | Guest OS | Ubuntu 22.04 | systemd as PID 1 |
 | IaC | Ansible | Roles, inventory, `ansible-vault` |
 | Orchestration | k3s | v1.31, Traefik and ServiceLB disabled |
@@ -125,8 +110,7 @@ Details: [`docs/architecture.md`](docs/architecture.md).
 ```bash
 # Ubuntu/Debian
 sudo apt update && sudo apt install -y python3 python3-venv make openssh-client
-sudo curl -fsSL https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl \
-    -o /usr/local/bin/kubectl && sudo chmod +x /usr/local/bin/kubectl
+sudo curl -fsSL https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && sudo chmod +x /usr/local/bin/kubectl
 
 # Ansible — project venv (recommended on Kali)
 python3 -m venv .venv
@@ -318,7 +302,7 @@ $ANSIBLE_VAULT;1.1;AES256
 
 ## Moving to a VPS
 
-1. Rent a VPS (e.g. Hetzner CX22: 2 vCPU, 4 GB RAM, ~€4/month).
+1. Rent a VPS.
 2. Edit `ansible/inventory/hosts.yml`:
 
 ```yaml
@@ -374,5 +358,4 @@ Full list: [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).  
-Copyright (c) 2026 MK ([@thearrowoftime](https://github.com/thearrowoftime)).
+Copyright (c) ([@thearrowoftime](https://github.com/thearrowoftime)).
