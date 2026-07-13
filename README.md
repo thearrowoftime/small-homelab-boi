@@ -1,30 +1,11 @@
 # small-homelab-boi
 
-A from-scratch home lab: three Docker “machines”, a Kubernetes cluster (k3s),
-Prometheus + Grafana monitoring, and a demo app - all provisioned with Ansible.
+A from-scratch home lab: three Docker “machines”, Kubernetes cluster (k3s),
+Prometheus + Grafana monitoring and a demo app - all provisioned with Ansible.
 One `make provision` and you have a mini datacenter on a laptop.
 
 **Companion chaos tool:** [notears](https://github.com/thearrowoftime/notears) -
 safe chaos engineering + detection validation against this lab.
-
----
-
-## Table of contents
-
-- [What it builds](#what-it-builds)
-- [Architecture](#architecture)
-- [Tech stack](#tech-stack)
-- [Requirements](#requirements)
-- [Quick start](#quick-start)
-- [What happens under the hood](#what-happens-under-the-hood)
-- [Repository layout](#repository-layout)
-- [Makefile cheatsheet](#makefile-cheatsheet)
-- [Security and secrets](#security-and-secrets)
-- [Demo talking points](#demo-talking-points)
-- [Moving to a VPS](#moving-to-a-vps)
-- [Chaos testing with NoTears](#chaos-testing-with-notears)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
 
 ---
 
@@ -38,16 +19,16 @@ This repository is **not a ready-made cluster** - it is the **automation that bu
 | 2. Bootstrap | Ansible (`common`) | Hostname, `/etc/hosts`, packages, sysctls for K8s |
 | 3. Kubernetes | Ansible (`k3s_server`, `k3s_agent`) | k3s cluster: 1 master + 2 workers |
 | 4. Monitoring | Ansible + Helm | Prometheus, Grafana, Alertmanager |
-| 5. Application | Ansible + YAML manifests | Nginx with a custom HTML page (2 replicas) |
+| 5. Application | Ansible + YAML manifests | nginx with a custom HTML page (2 replicas) |
 
 **When provisioning finishes you get:**
 
 | URL / path | Service |
 |------------|---------|
-| http://localhost:30080 | Demo app (Nginx) |
+| http://localhost:30080 | Demo app (nginx) |
 | http://localhost:30030 | Grafana (`admin` + password from vault) |
-| http://localhost:30090 | Prometheus UI |
-| http://localhost:30093 | Alertmanager UI |
+| http://localhost:30090 | Prometheus |
+| http://localhost:30093 | Alertmanager |
 | `kubectl` + `./kubeconfig` | Full cluster control |
 
 ---
@@ -55,20 +36,19 @@ This repository is **not a ready-made cluster** - it is the **automation that bu
 ## Architecture
 
 ```
-┌─────────────────── Docker network: small-homelab ───────────────────┐
-│                                                                     │
-│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
-│   │   master    │    │   worker1   │    │   worker2   │            │
-│   │ k3s server  │    │  k3s agent  │    │  k3s agent  │            │
-│   │ shb-master  │    │ shb-worker1 │    │ shb-worker2 │            │
-│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘            │
-│          │                  │                  │                    │
-└──────────┼──────────────────┼──────────────────┼────────────────────┘
+\-------------- Docker network: small-homelab --------------\
+\                                                           \
+\   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   \
+\   │   master    │    │   worker1   │    │   worker2   │   \   
+\   │ k3s server  │    │  k3s agent  │    │  k3s agent  │   \   
+\   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘   \   
+\          │                  │                  │          \     
+\-----------------------------------------------------------\
            │ SSH :2221        │ SSH :2222        │ SSH :2223
            ▼                  ▼                  ▼
     ┌──────────────────────────────────────────────────┐
-    │  Ansible (WSL2 on your laptop)                   │
-    │  inventory → roles → playbooks → vault           │
+    │  Ansible (WSL2)                                  │
+    │  inventory - roles - playbooks - vault           │
     └──────────────────────────────────────────────────┘
 
 Ports published on the host (Windows):
@@ -86,7 +66,7 @@ Ports published on the host (Windows):
 | “Hypervisor” | Docker Desktop + WSL2 | Privileged containers |
 | Guest OS | Ubuntu 22.04 | systemd as PID 1 |
 | IaC | Ansible | Roles, inventory, `ansible-vault` |
-| Orchestration | k3s | v1.31, Traefik and ServiceLB disabled |
+| Orchestration | k3s | v1.31 (Traefik and ServiceLB disabled) |
 | K8s packages | Helm 3 | `kube-prometheus-stack` |
 | Workload | Nginx | Deployment + ConfigMap + NodePort Service |
 | CI | GitHub Actions | yamllint, ansible-lint, shellcheck |
@@ -353,9 +333,3 @@ Control-plane (`shb-master` / host `master`) is deny-listed by default in NoTear
 | Grafana unreachable | `kubectl get svc -n monitoring` |
 
 Full list: [`docs/troubleshooting.md`](docs/troubleshooting.md).
-
----
-
-## License
-
-Copyright (c) ([@thearrowoftime](https://github.com/thearrowoftime)).
