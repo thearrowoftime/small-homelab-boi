@@ -296,11 +296,11 @@ worker2:  { ansible_host: 1.2.3.6,  ansible_port: 22 }
 
 ---
 
-## Chaos testing with NoTears
+## Chaos testing with notears
 
-[NoTears](https://github.com/thearrowoftime/notears) is designed to pair with this lab:
+[notears](https://github.com/thearrowoftime/notears) is designed to pair with this lab:
 
-| Lab resource | NoTears target |
+| Lab resource | notears target |
 |--------------|----------------|
 | Containers `shb-master` / `shb-worker1` / `shb-worker2` | `kill_container` (workers only by default) |
 | SSH `127.0.0.1:2222/2223` | `restart_service`, `break_dns`, … |
@@ -318,7 +318,7 @@ notears -c config.yaml doctor
 notears -c config.yaml chaos once          # dry-run
 ```
 
-Control-plane (`shb-master` / host `master`) is deny-listed by default in NoTears.
+Control-plane (`shb-master` / host `master`) is deny-listed by default in notears.
 
 ---
 
